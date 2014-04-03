@@ -36,6 +36,7 @@ class MixedWLUser(User):
 
         self._core = kwargs["core"] if kwargs.has_key("core") else 1
         self._prio = kwargs["prio"] if kwargs.has_key("prio") else 2
+        self._sessionId = kwargs["sessionId"] if kwargs.has_key("sessionId") else 10
         # default assumes hyperthreading count of 2
         self._instances = kwargs["instances"] if kwargs.has_key("instances") else multiprocessing.cpu_count()/2
         self._microsecs = kwargs["microsecs"] if kwargs.has_key("microsecs") else 1000
@@ -88,7 +89,7 @@ class MixedWLUser(User):
             "papi": self._papi,
             "core": str(self._core),
             "db": self._db,
-            "sessionId": str(self._userId),
+            "sessionId": str(self._sessionId),
             "priority": str(self._prio),
             "microsecs": str(self._microsecs)}
         randFormatDict = self.getQueryFormatDict()
@@ -113,7 +114,7 @@ class MixedWLUser(User):
             'papi': self._papi,
             "db": self._db,
             "instances": self._instances,
-            "sessionId": str(self._userId),
+            "sessionId": str(self._sessionId),
             "priority": str(self._prio),
             "microsecs": str(self._microsecs)}
         randFormatDict = self.getQueryFormatDict()
@@ -212,7 +213,9 @@ class MixedWLBenchmark(Benchmark):
         self._tolapUser = kwargs["tolapUser"] if kwargs.has_key("tolapUser") else 0
         self._tolapQueries = kwargs["tolapQueries"] if kwargs.has_key("tolapQueries") else ()
         self._tolapThinkTime = kwargs["tolapThinkTime"] if kwargs.has_key("tolapThinkTime") else 0
-        
+        self._sessionIds = kwargs["sessionIds"] if kwargs.has_key("sessionIds") else []
+        self._priorities = kwargs["priorities"] if kwargs.has_key("priorities") else []
+
         self._oltpUser = kwargs["oltpUser"] if kwargs.has_key("oltpUser") else 0
         self._oltpQueries = kwargs["oltpQueries"] if kwargs.has_key("oltpQueries") else ()
         self._oltpThinkTime = kwargs["oltpThinkTime"] if kwargs.has_key("oltpThinkTime") else 0
@@ -228,6 +231,10 @@ class MixedWLBenchmark(Benchmark):
             self._userArgs["thinkTime"] = self._olapThinkTime 
             self._userArgs["queries"] = self._olapQueries
             self._userArgs["instances"] = self._olapInstances
+            if len(self._sessionIds) > 0:
+                self._userArgs["sessionId"] = self._sessionIds[i]
+            if len(self._priorities) > 0:
+                self._userArgs["prio"] = self._priorities[i]
             if self._setLogGroupName:
                 self._userArgs["logGroupName"] = "OLAP"
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
@@ -236,15 +243,27 @@ class MixedWLBenchmark(Benchmark):
             self._userArgs["queries"] = self._tolapQueries 
             if self._setLogGroupName:
                 self._userArgs["logGroupName"] = "TOLAP"
+            if len(self._sessionIds) > 0:
+                self._userArgs["sessionId"] = self._sessionIds[i]
+            if len(self._priorities) > 0:
+                self._userArgs["prio"] = self._priorities[i]
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
         for i in range(self._olapUser + self._tolapUser, self._olapUser + self._tolapUser + self._oltpUser):
             self._userArgs["thinkTime"] = self._oltpThinkTime 
             self._userArgs["queries"] = self._oltpQueries
             if self._setLogGroupName: 
                 self._userArgs["logGroupName"] = "OLTP"
+            if len(self._sessionIds) > 0:
+                self._userArgs["sessionId"] = self._sessionIds[i]
+            if len(self._priorities) > 0:
+                self._userArgs["prio"] = self._priorities[i]
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
         if (self._olapUser + self._oltpUser + self._tolapUser) == 0:
             for i in range(self._numUsers):
+                if len(self._sessionIds) > 0:
+                    self._userArgs["sessionId"] = self._sessionIds[i]
+                if len(self._priorities) > 0:
+                    self._userArgs["prio"] = self._priorities[i]
                 self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
 
     def initDistinctValues(self):

@@ -1,5 +1,6 @@
 {
-    "priority": 2,
+    "sessionId" : %(sessionId)s,
+    "priority": %(priority)s,
     "operators": {
     "load_vbap": {
         "type": "GetTable",

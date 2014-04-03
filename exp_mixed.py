@@ -39,8 +39,6 @@ def runBenchmark_varying_users_OLTP(groupId, s1, **kwargs):
     output += plotter.printFormattedStatistics(kwargs["oltpQueries"])
     return output
 
-
-
 def runBenchmark_varying_users_OLAP(groupId, s1, **kwargs):
     output = ""
     #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
@@ -143,6 +141,37 @@ def runBenchmark_task_sizes(groupId, s1, **kwargs):
         b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
         b1.run()
         time.sleep(5)
+    plotter = MixedWLPlotter(groupId)
+    output += groupId + "\n"
+    output += plotter.printStatistics(kwargs["oltpQueries"]+kwargs["tolapQueries"] +kwargs["olapQueries"])
+   # output += plotter.printOpStatistics ()
+    return output
+
+def runBenchmark_fair_share(groupId, s1, **kwargs):
+    output = ""
+    #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
+
+    kwargs["olapQueries"] = ("q10i", "q11i", "q12i")
+    kwargs["olapUser"] = 12
+    kwargs["olapInstances"] = 12
+
+    sessionIds = []
+    priorities = []
+    for i in range(kwargs["olapUser"]/2):
+        sessionIds.append(2)
+        priorities.append(2)
+    for i in range(kwargs["olapUser"]/2, kwargs["olapUser"]):
+        sessionIds.append(3)
+        priorities.append(4)
+
+    kwargs["sessionIds"] = sessionIds
+    kwargs["priorities"] = priorities
+
+    runId = str(kwargs["olapUser"] )        
+    kwargs["numUsers"] = kwargs["olapUser"]
+    b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
+    b1.run()
+    time.sleep(5)
     plotter = MixedWLPlotter(groupId)
     output += groupId + "\n"
     output += plotter.printStatistics(kwargs["oltpQueries"]+kwargs["tolapQueries"] +kwargs["olapQueries"])
@@ -292,10 +321,10 @@ kwargs = {
     "useJson"           : args["json"],
     "dirBinary"         : "/home/Johannes.Wust/hyrise/build/",
     "hyriseDBPath"      : "/home/Johannes.Wust/vldb-tables/scaler/output",
-    "scheduler"         : "DynamicPriorityScheduler",
+    "scheduler"         : "FairShareScheduler",
     "serverThreads"     : 12,
     "remote"            : False,
-    "manual"            : False,
+    "manual"            : True,
     "host"              : "127.0.0.1"
 }
 
@@ -317,7 +346,7 @@ schedulers = [
     #    "ThreadLevelPriorityQueuesScheduler",
     #    "CoreBoundPriorityQueuesScheduler",
     #    "WSCoreBoundPriorityQueuesScheduler",
-        "CentralScheduler",
+    #    "CentralScheduler",
     #    "CentralPriorityScheduler",
     #    "ThreadPerTaskScheduler",
     #    "DynamicPriorityScheduler",
@@ -326,6 +355,7 @@ schedulers = [
     #    "WSNodeBoundQueuesScheduler",
     #    "NodeBoundPriorityQueuesScheduler",
     #    "WSNodeBoundPriorityQueuesScheduler"
+       "FairShareScheduler"
 ]
 
 #output += "\n"
@@ -334,7 +364,7 @@ schedulers = [
 #for scheduler in schedulers:
 #    print "OLAP benchmark with " + scheduler 
 #    kwargs["scheduler"] = scheduler
-output += runBenchmark_varying_users_OLTP("Var_q3" + kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
+output += runBenchmark_fair_share(kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
 
 #output += runBenchmark_varying_mts("Var_mts", s1, **kwargs)
 filename = "results_" + str(int(time.time()))
