@@ -27,13 +27,16 @@ class MixedWLPlotter:
         for runId, runData in sorted(self._runs.iteritems()):
             scheduler, user, n = runId.split('_')
             output.setdefault(scheduler, {})
-            output[scheduler].setdefault(user, [])
+            output[scheduler].setdefault(user, {})
+            output[scheduler][user].setdefault('count', [])
+            output[scheduler][user].setdefault('runtime', [])
             if len(runData.keys()) > 0:
-                output[scheduler][user].append(runData[runData.keys()[0]]['count'])
+                output[scheduler][user]['count'].append(runData[runData.keys()[0]]['count'])
+                output[scheduler][user]['runtime'].append(average(runData[runData.keys()[0]]['runtimes']))
 
         for scheduler in sorted(output.iterkeys()):
             for user in sorted(output[scheduler].iterkeys()):
-                logStr += "%s %s %s %s\n" % (scheduler, user, average(output[scheduler][user]), std(output[scheduler][user]))
+                logStr += "%s %s %s %s %s\n" % (scheduler, user, average(output[scheduler][user]['count']), std(output[scheduler][user]['count']), average(output[scheduler][user]['runtime']))
         return logStr
 
     def printStatistics(self, queries):
@@ -448,10 +451,13 @@ class MixedWLPlotter:
                     print "WARNING: no transaction log found in %s!" % dirBuild
                     continue
                 i = 0
+                runtimes = []
                 for rawline in open(os.path.join(dirBuild, "ab.log")):
                     if rawline.startswith("starttime"):
                         continue
                     i = i + 1
-                runs[run][build] = {"count" : i}
+                    elements = rawline.split()
+                    runtimes.append(int(elements[8]))
+                runs[run][build] = {"count" : i, "runtimes" : runtimes}
 
         return runs
