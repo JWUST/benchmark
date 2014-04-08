@@ -7,6 +7,7 @@ import time
 from benchmark.bench_mixed import MixedWLBenchmark
 from benchmark.mixedWLPlotter import MixedWLPlotter
 from benchmark.DynamicPlotter import DynamicPlotter
+from benchmark.FairSharePlotter import FairSharePlotter
 
 def runbenchmarks(groupId, s1, **kwargs):
     output = ""
@@ -43,10 +44,10 @@ def runBenchmark_varying_users_OLAP(groupId, s1, **kwargs):
     output = ""
     #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
     
-    kwargs["olapQueries"] = ("q10i","q11i","q12i")
+    kwargs["olapQueries"] = ("q11i","q12i")
 
-    instances = [32]#[16, 32]
-    users = [16]#, 32, 64, 128]#[1, 4, 8, 16, 24, 32, 64]
+    instances = [1, 12, 32]#[16, 32]
+    users = [1, 12, 24]#, 32, 64, 128]#[1, 4, 8, 16, 24, 32, 64]
     for i in instances:
         for j in users:
            print "starting benchmark with " + str(i) + " instances and " + str(j) + " users" 
@@ -56,7 +57,7 @@ def runBenchmark_varying_users_OLAP(groupId, s1, **kwargs):
            kwargs["numUsers"] = kwargs["olapUser"]
            b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
            b1.run()
-           time.sleep(3)
+           time.sleep(1)
     plotter = MixedWLPlotter(groupId)
     output += plotter.printFormattedStatistics(kwargs["olapQueries"])
     return output
@@ -65,15 +66,15 @@ def runBenchmark_varying_users(groupId, s1, **kwargs):
     output = ""
     #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
     
-    kwargs["olapQueries"] = ("q10i","q11i","q12i")
+    kwargs["olapQueries"] = ("q11i","q12i")
     kwargs["tolapUser"] = 0
     kwargs["tolapThinkTime"] = 1
     kwargs["tolapQueries"] = ("xsellingi",)
-    kwargs["oltpUser"] = 0
-    kwargs["oltpQueries"] = ("q7", "q8")
+    kwargs["oltpUser"] = 1
+    kwargs["oltpQueries"] = ("q6a", "q6b")
 
-    instances = [1]
-    users = [1]
+    instances = [12]#[16, 32]
+    users = [12]
     for i in instances:
         for j in users:
            print "starting benchmark with " + str(i) + " instances and " + str(j) + " users" 
@@ -83,7 +84,35 @@ def runBenchmark_varying_users(groupId, s1, **kwargs):
            kwargs["numUsers"] = kwargs["olapUser"] + kwargs["oltpUser"] + kwargs["tolapUser"]
            b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
            b1.run()
-           time.sleep(3)
+           time.sleep(1)
+    plotter = MixedWLPlotter(groupId)
+    output += plotter.printFormattedStatistics(kwargs["oltpQueries"]+kwargs["tolapQueries"] +kwargs["olapQueries"])
+   # output += plotter.printOpStatistics ()
+    return output
+
+def runBenchmark_varying_users1(groupId, s1, **kwargs):
+    output = ""
+    #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
+    
+    kwargs["olapQueries"] = ("q11i","q12i")
+    kwargs["tolapUser"] = 0
+    kwargs["tolapThinkTime"] = 1
+    kwargs["tolapQueries"] = ("xsellingi",)
+    kwargs["oltpUser"] = 1
+    kwargs["oltpQueries"] = ("q7", "q8")
+
+    instances = [1, 12, 32]#[16, 32]
+    users = [1, 12, 24]
+    for i in instances:
+        for j in users:
+           print "starting benchmark with " + str(i) + " instances and " + str(j) + " users" 
+           runId = str(i) + "_" + str(j)
+           kwargs["olapInstances"] = i
+           kwargs["olapUser"] = j
+           kwargs["numUsers"] = kwargs["olapUser"] + kwargs["oltpUser"] + kwargs["tolapUser"]
+           b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
+           b1.run()
+           time.sleep(1)
     plotter = MixedWLPlotter(groupId)
     output += plotter.printFormattedStatistics(kwargs["oltpQueries"]+kwargs["tolapQueries"] +kwargs["olapQueries"])
    # output += plotter.printOpStatistics ()
@@ -153,28 +182,37 @@ def runBenchmark_fair_share(groupId, s1, **kwargs):
 
     kwargs["olapQueries"] = ("q10i", "q11i", "q12i")
     kwargs["olapUser"] = 12
-    kwargs["olapInstances"] = 12
+    kwargs["olapInstances"] = 32
 
     sessionIds = []
     priorities = []
-    for i in range(kwargs["olapUser"]/2):
+    starttime = []
+   
+    for i in range(kwargs["olapUser"]/4):
         sessionIds.append(2)
         priorities.append(2)
-    for i in range(kwargs["olapUser"]/2, kwargs["olapUser"]):
+        starttime.append(0)
+    for i in range(kwargs["olapUser"]/4, kwargs["olapUser"]/2):
         sessionIds.append(3)
         priorities.append(4)
+        starttime.append(30)
+    for i in range(kwargs["olapUser"]/2, kwargs["olapUser"]):
+        sessionIds.append(4)
+        priorities.append(2)
+        starttime.append(120)
 
     kwargs["sessionIds"] = sessionIds
     kwargs["priorities"] = priorities
+    kwargs["starttimes"] = starttime
 
-    runId = str(kwargs["olapUser"] )        
+    runId = str(kwargs["olapUser"])        
     kwargs["numUsers"] = kwargs["olapUser"]
     b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
-    b1.run()
-    time.sleep(5)
-    plotter = MixedWLPlotter(groupId)
+    #b1.run()
+    time.sleep(0.5)
+    plotter = FairSharePlotter(groupId, sessionIds, kwargs["runtime"]*1000, 5000)
     output += groupId + "\n"
-    output += plotter.printStatistics(kwargs["oltpQueries"]+kwargs["tolapQueries"] +kwargs["olapQueries"])
+    output += plotter.printFairShareStatistics(kwargs["olapQueries"], sessionIds)
    # output += plotter.printOpStatistics ()
     return output
 
@@ -265,8 +303,8 @@ s1 = benchmark.Settings("Standard", PERSISTENCY="NONE", COMPILER="autog++")
 #kwargs = {
 #    "port"              : args["port"],
 #    "manual"            : True,
-#    "warmuptime"        : 5,
-#    "runtime"           : 10,
+#    "warmuptime"        : 1,
+#    "runtime"           : 3,
 #    "showStdout"        : False,
 #    "showStderr"        : args["stderr"],
 #    "rebuild"           : args["rebuild"],
@@ -309,7 +347,7 @@ s1 = benchmark.Settings("Standard", PERSISTENCY="NONE", COMPILER="autog++")
 ##begram local
 kwargs = {
     "port"              : args["port"],
-    "warmuptime"        : 1,
+    "warmuptime"        : 2,
     "runtime"           : 10,
     "showStdout"        : True,
     "showStderr"        : args["stderr"],
@@ -324,7 +362,7 @@ kwargs = {
     "scheduler"         : "FairShareScheduler",
     "serverThreads"     : 12,
     "remote"            : False,
-    "manual"            : True,
+    "manual"            : False,
     "host"              : "127.0.0.1"
 }
 
@@ -350,21 +388,24 @@ schedulers = [
     #    "CentralPriorityScheduler",
     #    "ThreadPerTaskScheduler",
     #    "DynamicPriorityScheduler",
-    #   "DynamicScheduler",
-    #    "NodeBoundQueuesScheduler",
-    #    "WSNodeBoundQueuesScheduler",
+    #    "DynamicScheduler",
+        "NodeBoundQueuesScheduler",
+        "WSNodeBoundQueuesScheduler",
     #    "NodeBoundPriorityQueuesScheduler",
     #    "WSNodeBoundPriorityQueuesScheduler"
-       "FairShareScheduler"
+    #   "FairShareScheduler"
 ]
 
 #output += "\n"
 #output += "\n"
 #kwargs["runtime"] = 120
-#for scheduler in schedulers:
-#    print "OLAP benchmark with " + scheduler 
-#    kwargs["scheduler"] = scheduler
-output += runBenchmark_fair_share(kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
+for scheduler in schedulers:
+    print "OLAP benchmark with " + scheduler 
+    kwargs["scheduler"] = scheduler
+    output += runBenchmark_varying_users(kwargs["scheduler"] + "_OLAP_OLTPw_" + str(kwargs["serverThreads"]), s1, **kwargs)
+ #   output += runBenchmark_varying_users1(kwargs["scheduler"] + "_OLAP_OLTP_" + str(kwargs["serverThreads"]), s1, **kwargs)
+
+#output += runBenchmark_fair_share(kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
 
 #output += runBenchmark_varying_mts("Var_mts", s1, **kwargs)
 filename = "results_" + str(int(time.time()))

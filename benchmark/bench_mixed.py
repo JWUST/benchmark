@@ -213,8 +213,10 @@ class MixedWLBenchmark(Benchmark):
         self._tolapUser = kwargs["tolapUser"] if kwargs.has_key("tolapUser") else 0
         self._tolapQueries = kwargs["tolapQueries"] if kwargs.has_key("tolapQueries") else ()
         self._tolapThinkTime = kwargs["tolapThinkTime"] if kwargs.has_key("tolapThinkTime") else 0
+     
         self._sessionIds = kwargs["sessionIds"] if kwargs.has_key("sessionIds") else []
         self._priorities = kwargs["priorities"] if kwargs.has_key("priorities") else []
+        self._starttimes = kwargs["starttimes"] if kwargs.has_key("starttimes") else []
 
         self._oltpUser = kwargs["oltpUser"] if kwargs.has_key("oltpUser") else 0
         self._oltpQueries = kwargs["oltpQueries"] if kwargs.has_key("oltpQueries") else ()
@@ -235,6 +237,8 @@ class MixedWLBenchmark(Benchmark):
                 self._userArgs["sessionId"] = self._sessionIds[i]
             if len(self._priorities) > 0:
                 self._userArgs["prio"] = self._priorities[i]
+            if len(self._starttimes) > 0:
+                self._userArgs["startTime"] = self._starttimes[i]
             if self._setLogGroupName:
                 self._userArgs["logGroupName"] = "OLAP"
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
@@ -247,6 +251,8 @@ class MixedWLBenchmark(Benchmark):
                 self._userArgs["sessionId"] = self._sessionIds[i]
             if len(self._priorities) > 0:
                 self._userArgs["prio"] = self._priorities[i]
+            if len(self._starttimes) > 0:
+                self._userArgs["startTime"] = self._starttimes[i]
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
         for i in range(self._olapUser + self._tolapUser, self._olapUser + self._tolapUser + self._oltpUser):
             self._userArgs["thinkTime"] = self._oltpThinkTime 
@@ -257,6 +263,8 @@ class MixedWLBenchmark(Benchmark):
                 self._userArgs["sessionId"] = self._sessionIds[i]
             if len(self._priorities) > 0:
                 self._userArgs["prio"] = self._priorities[i]
+            if len(self._starttimes) > 0:
+                self._userArgs["startTime"] = self._starttimes[i]
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
         if (self._olapUser + self._oltpUser + self._tolapUser) == 0:
             for i in range(self._numUsers):
@@ -264,6 +272,8 @@ class MixedWLBenchmark(Benchmark):
                     self._userArgs["sessionId"] = self._sessionIds[i]
                 if len(self._priorities) > 0:
                     self._userArgs["prio"] = self._priorities[i]
+                if len(self._starttimes) > 0:
+                    self._userArgs["startTime"] = self._starttimes[i]
                 self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
 
     def initDistinctValues(self):
@@ -281,7 +291,7 @@ class MixedWLBenchmark(Benchmark):
             if "rows" in data:
                 self._distincts[q] = data["rows"]
             num_prep += 1
-        print "finished prepare for placeholders ...                                            "
+        print "finished prepare for placeholders ..."
 
     def loadQueryDict(self):
         queryDict = {}
