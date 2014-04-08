@@ -23,9 +23,10 @@ def runbenchmarks(groupId, s1, **kwargs):
     output += plotter.printFormattedStatisticsAverage(kwargs["benchmarkQueries"])
     return output
 
+# NOTE: Changed the queries to the name_spaced versions since no standard versions exist.
 def runBenchmark_varying_users_OLTP(groupId, s1, **kwargs):
     output = ""
-    kwargs["oltpQueries"] = ("q6a", "q6b", "q7", "q8", "q9")
+    kwargs["oltpQueries"] = ("vldb_q6a", "vldb_q6b", "vldb_q7", "vldb_q8", "vldb_q9")
 
     users = [64]#[1, 4, 8, 16, 24, 32, 64]
     for j in users:
@@ -65,13 +66,12 @@ def runBenchmark_varying_users_OLAP(groupId, s1, **kwargs):
 def runBenchmark_varying_users(groupId, s1, **kwargs):
     output = ""
     #users = [1, 2, 4, 8, 16]#, 24, 32]#, 48, 64, 96, 128]
-    
     kwargs["olapQueries"] = ("q11i","q12i")
     kwargs["tolapUser"] = 0
     kwargs["tolapThinkTime"] = 1
     kwargs["tolapQueries"] = ("xsellingi",)
     kwargs["oltpUser"] = 1
-    kwargs["oltpQueries"] = ("q6a", "q6b")
+    kwargs["oltpQueries"] = ("vldb_q6a", "vldb_q6b", "vldb_q7", "vldb_q8", "vldb_q9")
 
     instances = [12]#[16, 32]
     users = [12]
@@ -220,26 +220,32 @@ def runBenchmark_fair_share(groupId, s1, **kwargs):
 def runBenchmark_varying_mts(groupId, s1, **kwargs):
     output = ""
 
-    kwargs["oltpQueries"] = ("q6a", "q6b", "q7", "q8", "q9")
+    kwargs["oltpQueries"] = ("vldb_q6a", "vldb_q6b", "vldb_q7", "vldb_q8", "vldb_q9")
     kwargs["oltpUser"] = 1
-    kwargs["tolapQueries"] = ("xselling",)
+    kwargs["tolapQueries"] = ("vldb_xselling",)
     # TODO why was that 0?
     kwargs["tolapUser"] = 1
     # TODO is this in seconds?
     kwargs["tolapThinkTime"] = 1
-    kwargs["olapQueries"] = ("q10", "q11", "q12")
-    kwargs["olapUser"] =   32
-    kwargs["setLogGroupName"] = True
+    kwargs["olapQueries"] = ("vldb_q10", "vldb_q11", "vldb_q12")
+    kwargs["olapUser"] = 32
 
-    mts_list = [30, 250, 500, 1000]
+    distincts = None
+
+    mts_list = [30, 50, 70, 150, 200, 250, 350, 400, 450, 500, 750, 1000]
     for mts in mts_list:
         print "starting benchmark with mts=" + str(mts)
+        if not distincts is None:
+          print "Reusing distincts from now on."
+          kwargs["distincts"] = distincts
         runId = str(mts)        
         kwargs["mts"] = mts
         kwargs["numUsers"] = kwargs["olapUser"] + kwargs["oltpUser"] + kwargs["tolapUser"]
         b1 = MixedWLBenchmark(groupId, runId, s1, **kwargs)
         b1.run()
         time.sleep(5)
+        # save distincts for next run
+        distincts = b1.getDistinctValues()
     groupMapping = {}
     for query in kwargs["oltpQueries"]:
      groupMapping[query] = "OLTP" 
@@ -252,6 +258,7 @@ def runBenchmark_varying_mts(groupId, s1, **kwargs):
     output += plotter.printGroupFormatted(groupMapping)
     output += "\n"
     output += plotter.printQueryOpStatistics(("NestedLoopEquiJoin", "TableScan"))
+    plotter.plotGroups(groupMapping)
     return output
 
 aparser = argparse.ArgumentParser(description='Python implementation of the TPC-C Benchmark for HYRISE')
@@ -359,10 +366,10 @@ kwargs = {
     "useJson"           : args["json"],
     "dirBinary"         : "/home/Johannes.Wust/hyrise/build/",
     "hyriseDBPath"      : "/home/Johannes.Wust/vldb-tables/scaler/output",
-    "scheduler"         : "FairShareScheduler",
+    "scheduler"         : "DynamicPriorityScheduler",
     "serverThreads"     : 12,
     "remote"            : False,
-    "manual"            : False,
+    "manual"            : True,
     "host"              : "127.0.0.1"
 }
 
@@ -396,17 +403,15 @@ schedulers = [
     #   "FairShareScheduler"
 ]
 
+
 #output += "\n"
 #output += "\n"
 #kwargs["runtime"] = 120
-for scheduler in schedulers:
-    print "OLAP benchmark with " + scheduler 
-    kwargs["scheduler"] = scheduler
-    output += runBenchmark_varying_users(kwargs["scheduler"] + "_OLAP_OLTPw_" + str(kwargs["serverThreads"]), s1, **kwargs)
- #   output += runBenchmark_varying_users1(kwargs["scheduler"] + "_OLAP_OLTP_" + str(kwargs["serverThreads"]), s1, **kwargs)
-
-#output += runBenchmark_fair_share(kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
-
+#for scheduler in schedulers:
+#    print "OLAP benchmark with " + scheduler 
+#    kwargs["scheduler"] = scheduler
+output += runBenchmark_varying_users("Var_q3" + kwargs["scheduler"] + "_OLAP_" + str(kwargs["serverThreads"]), s1, **kwargs)
+#
 #output += runBenchmark_varying_mts("Var_mts", s1, **kwargs)
 filename = "results_" + str(int(time.time()))
 f = open(filename,'w')

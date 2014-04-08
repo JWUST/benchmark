@@ -57,6 +57,8 @@ class MixedWLUser(User):
     def runUser(self):
         """ main user activity """
         # choose query from _queries
+
+        print "runUser " + str(self._userId)
         self.perf = {}
         query = ''
         current_query = self._totalRuns % len(self._benchmarkQueries)
@@ -205,6 +207,8 @@ class MixedWLBenchmark(Benchmark):
         #self._dirHyriseDB = os.path.join(os.getcwd(), "hyrise")
         os.environ['HYRISE_DB_PATH'] = self._dirHyriseDB
 
+        self._distincts = kwargs["distincts"] if kwargs.has_key("distincts") else None
+
         self._olapUser = kwargs["olapUser"] if kwargs.has_key("olapUser") else 0
         self._olapQueries = kwargs["olapQueries"] if kwargs.has_key("olapQueries") else ()
         self._olapThinkTime = kwargs["olapThinkTime"] if kwargs.has_key("olapThinkTime") else 0
@@ -221,14 +225,20 @@ class MixedWLBenchmark(Benchmark):
         self._oltpUser = kwargs["oltpUser"] if kwargs.has_key("oltpUser") else 0
         self._oltpQueries = kwargs["oltpQueries"] if kwargs.has_key("oltpQueries") else ()
         self._oltpThinkTime = kwargs["oltpThinkTime"] if kwargs.has_key("oltpThinkTime") else 0
-        self._setLogGroupName = kwargs["setLogGroupName"] if kwargs.has_key("setLogGroupName") else False
 
         self.setUserClass(MixedWLUser)
         self._queryDict = self.loadQueryDict()
 
+    def benchAfterLoad(self):
+        if self._distincts is None:
+            self.initDistinctValues()
+        print "after initdistinct ... "
+
     def _createUsers(self):
-        self.initDistinctValues()
         self._userArgs["distincts"] = self._distincts
+
+        print "createUsers ... "
+
         for i in range(self._olapUser):
             self._userArgs["thinkTime"] = self._olapThinkTime 
             self._userArgs["queries"] = self._olapQueries
@@ -239,14 +249,10 @@ class MixedWLBenchmark(Benchmark):
                 self._userArgs["prio"] = self._priorities[i]
             if len(self._starttimes) > 0:
                 self._userArgs["startTime"] = self._starttimes[i]
-            if self._setLogGroupName:
-                self._userArgs["logGroupName"] = "OLAP"
             self._users.append(self._userClass(userId=i, host=self._host, port=self._port, dirOutput=self._dirResults, queryDict=self._queryDict, collectPerfData=self._collectPerfData, useJson=self._useJson, write_to_file=self._write_to_file, write_to_file_count=self._write_to_file_count, **self._userArgs))
         for i in range(self._olapUser, self._olapUser + self._tolapUser):
             self._userArgs["thinkTime"] = self._tolapThinkTime 
             self._userArgs["queries"] = self._tolapQueries 
-            if self._setLogGroupName:
-                self._userArgs["logGroupName"] = "TOLAP"
             if len(self._sessionIds) > 0:
                 self._userArgs["sessionId"] = self._sessionIds[i]
             if len(self._priorities) > 0:
@@ -257,8 +263,6 @@ class MixedWLBenchmark(Benchmark):
         for i in range(self._olapUser + self._tolapUser, self._olapUser + self._tolapUser + self._oltpUser):
             self._userArgs["thinkTime"] = self._oltpThinkTime 
             self._userArgs["queries"] = self._oltpQueries
-            if self._setLogGroupName: 
-                self._userArgs["logGroupName"] = "OLTP"
             if len(self._sessionIds) > 0:
                 self._userArgs["sessionId"] = self._sessionIds[i]
             if len(self._priorities) > 0:
@@ -282,19 +286,22 @@ class MixedWLBenchmark(Benchmark):
         sys.stdout.write(status_string+"\r")
         sys.stdout.flush()
         num_prep = 0
-        for q in PREPARE_DISTINCTS_SERVER:
-            sys.stdout.write(status_string + " %i%%\r" % (num_prep / float(len(PREPARE_DISTINCTS_SERVER)) * 100))
-            sys.stdout.flush()
-            with open(PREPARE_DISTINCTS_SERVER[q], "r") as f:
-                query = f.read()
-            data = self.fireQuery(query).json()
-            if "rows" in data:
-                self._distincts[q] = data["rows"]
-            num_prep += 1
-        print "finished prepare for placeholders ..."
+        query_pairs = [(k, open(v, "r").read()) for (k,v) in PREPARE_DISTINCTS_SERVER.iteritems()]
+        resp_pairs = [(query_pairs[i][0], resp) for i, resp in enumerate(self._fireQueryParallel([v for (k,v) in query_pairs]))]
+        for queryName, resp in resp_pairs:
+          data = resp.json()
+          if "rows" in data:
+            self._distincts[queryName] = data["rows"]
+        print "finished prepare for placeholders ...                                            "
+
+    def getDistinctValues(self):
+        return self._distincts
 
     def loadQueryDict(self):
         queryDict = {}
+        # read LOAD queries
+        for q in TABLE_LOAD_QUERIES_SERVER:
+            queryDict[q] = open(TABLE_LOAD_QUERIES_SERVER[q], "r").read()
         # read PREPARE queries
         for q in PREPARE_QUERIES_USER:
             queryDict[q] = open(PREPARE_QUERIES_USER[q], "r").read()

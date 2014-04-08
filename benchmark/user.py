@@ -57,7 +57,6 @@ class User(multiprocessing.Process):
         self._prepare()
         self.prepareUser()
         started = False
-        print self._startTime
         while not self._stopevent.is_set():
             tStart = time.time()
             if(self._startTime > 0 and not started):
@@ -76,6 +75,7 @@ class User(multiprocessing.Process):
         self._stopevent.set()
 
     def fireQuery(self, queryString, queryArgs={"papi": "NO_PAPI"}, sessionContext=None, autocommit=False, stored_procedure=None):
+        print queryString
         if queryArgs: query = queryString % queryArgs
         else:         query = queryString
         data = {"query": query}
@@ -96,7 +96,10 @@ class User(multiprocessing.Process):
                self.write_request_to_file_query(query, self._write_to_file)
                return 
             else:
+                print "fire query " + str("http://%s:%s/" % (self._host, self._port))
+                print self._session
                 result = self._session.post("http://%s:%s/" % (self._host, self._port), data=data, timeout=100000)
+        print "recv result"
         self._totalQueryTime += time.time() - tStart
 
         if result.status_code == 200:
