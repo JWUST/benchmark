@@ -157,7 +157,7 @@ schedulers = [
     #    "WSNodeBoundPriorityQueuesScheduler"
 ]
 
-users = 1#[1, 4, 8, 16, 24, 36, 48, 64, 96, 128]
+users = [1]#[1, 4, 8, 16, 24, 36, 48, 64, 96, 128]
 runs = 1#5
 
 kwargs["abQueryFile"] = "olapqueries.txt"
@@ -165,7 +165,7 @@ for scheduler in schedulers:
     kwargs["scheduler"] = scheduler
     for user in users:
         kwargs["numUsers"] = user
-        run_benchmark_none("None", groupId, kwargs, runs)
+        #run_benchmark_none("None", groupId, kwargs, runs)
     
 
 output = "\n\n <<<<<<<< Output >>>>>>>\n"
@@ -179,30 +179,30 @@ f.close() # you can omit in most cases as the destructor will call if
 
 # remove files in results
 
-folder_path = '/home/Johannes.Wust/hyrise-benchmark/results'
-for file_object in os.listdir(folder_path):
-    file_object_path = os.path.join(folder_path, file_object)
-    if os.path.isfile(file_object_path):
-        os.unlink(file_object_path)
-    else:
-        shutil.rmtree(file_object_path)
-
-kwargs["abQueryFile"] = "oltpqueries.txt"
-for scheduler in schedulers:
-    kwargs["scheduler"] = scheduler
-    for user in users:
-        kwargs["numUsers"] = user
-        run_benchmark_none("None", groupId, kwargs, runs)
-    
-
-output = "\n\n <<<<<<<< Output >>>>>>>\n"
-plotter = MixedWLPlotter(groupId, True)
-output += str(plotter.printABStatistics())
-
-filename = "results_" + str(int(time.time()))
-f = open(filename,'w')
-f.write(output) # python will convert \n to os.linesep
-f.close()
+#folder_path = '/home/Johannes.Wust/hyrise-benchmark/results'
+#for file_object in os.listdir(folder_path):
+#    file_object_path = os.path.join(folder_path, file_object)
+#    if os.path.isfile(file_object_path):
+#        os.unlink(file_object_path)
+#    else:
+#        shutil.rmtree(file_object_path)
+#
+#kwargs["abQueryFile"] = "oltpqueries.txt"
+#for scheduler in schedulers:
+#    kwargs["scheduler"] = scheduler
+#    for user in users:
+#        kwargs["numUsers"] = user
+#        run_benchmark_none("None", groupId, kwargs, runs)
+#    
+#
+#output = "\n\n <<<<<<<< Output >>>>>>>\n"
+#plotter = MixedWLPlotter(groupId, True)
+#output += str(plotter.printABStatistics())
+#
+#filename = "results_" + str(int(time.time()))
+#f = open(filename,'w')
+#f.write(output) # python will convert \n to os.linesep
+#f.close()
 
 #print output
 
